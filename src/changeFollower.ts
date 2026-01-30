@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { minimatch } from 'minimatch';
 import { ConfigurationManager } from './configuration';
 import { debounce, Debouncer } from './debounce';
+import { GitignoreManager } from './gitignoreManager';
 
 interface PendingChange {
     uri: vscode.Uri;
@@ -13,6 +14,7 @@ export class ChangeFollower implements vscode.Disposable {
     private _isEnabled = false;
     private readonly disposables: vscode.Disposable[] = [];
     private readonly configManager: ConfigurationManager;
+    private readonly gitignoreManager: GitignoreManager;
     private readonly pendingChanges: Map<string, PendingChange> = new Map();
     private processChangesDebouncer: Debouncer | undefined;
     private highlightDecorationType: vscode.TextEditorDecorationType | undefined;
@@ -20,6 +22,7 @@ export class ChangeFollower implements vscode.Disposable {
 
     constructor(configManager: ConfigurationManager) {
         this.configManager = configManager;
+        this.gitignoreManager = new GitignoreManager();
         this.setupHighlightDecoration();
         this.setupDebouncer();
     }
@@ -173,9 +176,14 @@ export class ChangeFollower implements vscode.Disposable {
     }
 
     private shouldFollowFile(uri: vscode.Uri): boolean {
+        // Check gitignore first if enabled
+        if (this.configManager.respectGitignore && this.gitignoreManager.isIgnored(uri)) {
+            return false;
+        }
+
         const relativePath = vscode.workspace.asRelativePath(uri, false);
 
-        // Check exclude patterns first
+        // Check exclude patterns after gitignore
         for (const pattern of this.configManager.excludePatterns) {
             if (minimatch(relativePath, pattern, { dot: true })) {
                 return false;
@@ -312,6 +320,7 @@ export class ChangeFollower implements vscode.Disposable {
     dispose(): void {
         this.disable();
         this.highlightDecorationType?.dispose();
+        this.gitignoreManager.dispose();
         this.clearListeners();
     }
 }
