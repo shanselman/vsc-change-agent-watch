@@ -30,38 +30,19 @@ export class GitignoreManager implements vscode.Disposable {
         }
 
         for (const folder of workspaceFolders) {
-            this.loadGitignoreForFolder(folder.uri.fsPath, folder.uri.fsPath);
-        }
-    }
-
-    private loadGitignoreForFolder(folderPath: string, workspaceRoot: string): void {
-        const gitignorePath = path.join(folderPath, '.gitignore');
-        
-        if (fs.existsSync(gitignorePath)) {
-            try {
-                const content = fs.readFileSync(gitignorePath, 'utf8');
-                const ig = ignore().add(content);
-                
-                // Store with relative path from workspace root as key
-                const relativePath = path.relative(workspaceRoot, folderPath);
-                const key = relativePath || '.';
-                this.ignoreFilters.set(key, ig);
-            } catch (error) {
-                console.log(`Failed to load .gitignore from ${gitignorePath}:`, error);
-            }
-        }
-
-        // Recursively check subdirectories for .gitignore files
-        try {
-            const entries = fs.readdirSync(folderPath, { withFileTypes: true });
-            for (const entry of entries) {
-                if (entry.isDirectory() && entry.name !== '.git' && entry.name !== 'node_modules') {
-                    const subPath = path.join(folderPath, entry.name);
-                    this.loadGitignoreForFolder(subPath, workspaceRoot);
+            const gitignorePath = path.join(folder.uri.fsPath, '.gitignore');
+            
+            if (fs.existsSync(gitignorePath)) {
+                try {
+                    const content = fs.readFileSync(gitignorePath, 'utf8');
+                    const ig = ignore().add(content);
+                    
+                    // Store with workspace folder URI as key
+                    this.ignoreFilters.set(folder.uri.fsPath, ig);
+                } catch (error) {
+                    console.log(`Failed to load .gitignore from ${gitignorePath}:`, error);
                 }
             }
-        } catch (error) {
-            // Directory might not be readable, skip
         }
     }
 
@@ -71,34 +52,17 @@ export class GitignoreManager implements vscode.Disposable {
             return false;
         }
 
-        const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
-        
-        // Check all gitignore filters from root to the file's directory
-        for (const [filterPath, ig] of this.ignoreFilters.entries()) {
-            // Determine the path relative to this .gitignore file
-            let pathToCheck: string;
-            
-            if (filterPath === '.') {
-                // Root .gitignore
-                pathToCheck = relativePath;
-            } else {
-                // Check if the file is under this .gitignore's directory
-                if (relativePath.startsWith(filterPath + path.sep) || relativePath === filterPath) {
-                    pathToCheck = path.relative(filterPath, relativePath);
-                } else {
-                    continue;
-                }
-            }
-
-            // Normalize path separators for cross-platform compatibility
-            const normalizedPath = pathToCheck.split(path.sep).join('/');
-            
-            if (ig.ignores(normalizedPath)) {
-                return true;
-            }
+        const ig = this.ignoreFilters.get(workspaceFolder.uri.fsPath);
+        if (!ig) {
+            return false;
         }
 
-        return false;
+        const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+        
+        // Normalize path separators for cross-platform compatibility
+        const normalizedPath = relativePath.split(path.sep).join('/');
+        
+        return ig.ignores(normalizedPath);
     }
 
     dispose(): void {
