@@ -13,8 +13,8 @@ export class GitignoreManager implements vscode.Disposable {
     }
 
     private setupFileWatcher(): void {
-        // Watch for .gitignore file changes
-        this.fileWatcher = vscode.workspace.createFileSystemWatcher('**/.gitignore');
+        // Watch for .gitignore file changes in workspace root folders only
+        this.fileWatcher = vscode.workspace.createFileSystemWatcher('.gitignore');
         
         this.fileWatcher.onDidCreate(() => this.loadGitignoreFiles());
         this.fileWatcher.onDidChange(() => this.loadGitignoreFiles());
@@ -58,6 +58,11 @@ export class GitignoreManager implements vscode.Disposable {
         }
 
         const relativePath = path.relative(workspaceFolder.uri.fsPath, uri.fsPath);
+        
+        // If path starts with '..', file is outside workspace
+        if (relativePath.startsWith('..')) {
+            return false;
+        }
         
         // Normalize path separators for cross-platform compatibility
         const normalizedPath = relativePath.split(path.sep).join('/');

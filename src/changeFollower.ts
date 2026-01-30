@@ -183,7 +183,7 @@ export class ChangeFollower implements vscode.Disposable {
 
         const relativePath = vscode.workspace.asRelativePath(uri, false);
 
-        // Check exclude patterns
+        // Check exclude patterns after gitignore
         for (const pattern of this.configManager.excludePatterns) {
             if (minimatch(relativePath, pattern, { dot: true })) {
                 return false;
