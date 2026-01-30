@@ -9,6 +9,7 @@ A VS Code extension that follows file changes in real-time, automatically openin
 - **Status bar integration**: See at a glance if follow mode is active, click to toggle
 - **Command palette**: Quick access to enable, disable, or toggle follow mode
 - **Configurable patterns**: Include or exclude files based on glob patterns
+- **.gitignore support**: Automatically respects .gitignore files to avoid following ignored files
 - **Debounced updates**: Prevents overwhelming the editor during rapid changes
 
 ## Use Cases
@@ -68,6 +69,7 @@ Configure the extension in VS Code settings:
 | `fileChangeFollower.excludePatterns` | `["**/node_modules/**", "**/.git/**", ...]` | Glob patterns for files to exclude |
 | `fileChangeFollower.debounceMs` | `150` | Debounce interval (0-2000ms) |
 | `fileChangeFollower.highlightDuration` | `2000` | How long to highlight changes (0 to disable) |
+| `fileChangeFollower.respectGitignore` | `true` | Respect .gitignore files and don't follow ignored files |
 
 ### Example Settings
 
@@ -81,7 +83,8 @@ Configure the extension in VS Code settings:
     "**/out/**"
   ],
   "fileChangeFollower.debounceMs": 150,
-  "fileChangeFollower.highlightDuration": 2000
+  "fileChangeFollower.highlightDuration": 2000,
+  "fileChangeFollower.respectGitignore": true
 }
 ```
 
